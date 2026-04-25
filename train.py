@@ -148,3 +148,44 @@ for steps in range(max_steps):
 print(loss.item())
 # %%
 print(decode(m.generate(torch.zeros((1,1), dtype=torch.long), max_new_tokens=500)[0].tolist()))
+
+# %%
+#attention is all you need
+torch.manual_seed(1337)
+B,T,C = 4,8,2 #batch, time, channels
+x = torch.randn(B,T,C) #the shape of x is (B,T,C)
+x.shape
+# %%
+#version 1: using for loops
+# we want x[b,t] = mean {x<=t} (x[b,t])
+xbow  = torch.zeros((B,T,C))
+for b in range(B):
+    for t in range(T):
+        xprev = x[b,: t+1] # (t+1, C)
+        xbow[b,t] = torch.mean(xprev, 0) # (C,)
+print(xbow.shape)
+# %%
+x[0]
+
+# %%
+xbow[0]
+
+# %%
+#version 2: using matrix operations
+wei = torch.tril(torch.ones(T, T))
+wei = wei / wei.sum(1, keepdim=True)
+xbow2 = wei @ x # (B,T,T) @ (B,T,C)
+torch.allclose(xbow, xbow2)
+# %%
+torch.manual_seed(32)
+a = torch.tril(torch.ones(3,3))
+a = a / torch.sum(a, dim=1, keepdim=True)
+b = torch.randint(0,10,(3,2)).float()
+c = a @ b
+print("a::")
+print(a)
+print("b::")
+print(b)
+print("c::")
+print(c)
+# %%
