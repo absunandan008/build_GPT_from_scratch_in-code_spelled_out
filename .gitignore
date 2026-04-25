@@ -5,3 +5,36 @@ ENV/
 env/
 
 .DS_Store
+
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# uv
+.python-version
+uv.lock        # optional — commit this if you want reproducible installs
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb        # optional — you may WANT to commit notebooks
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Data / model weights
+*.pt
+*.pth
+*.bin
+*.safetensors
+data/git
