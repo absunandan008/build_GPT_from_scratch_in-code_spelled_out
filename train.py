@@ -185,6 +185,46 @@ wei = F.softmax(wei, dim=-1)
 xbow3 = wei @ x
 torch.allclose(xbow, xbow3)
 # %%
+#version 4:self attention
+torch.manual_seed(1337)
+B,T,C = 4, 8, 32 #batch, time, channels
+x = torch.randn(B,T,C) # (B,T,C)
+
+#lets see a single head perform self attention
+head_size = 16
+key = nn.Linear(C, head_size, bias=False)
+query = nn.Linear(C, head_size, bias=False)
+# v are the values we want to aggregate based on k and q
+value = nn.Linear(C, head_size, bias=False)
+k = key(x) # (B,T,16)
+q = query(x) # (B,T,16)
+v = value(x) # (B,T,16)
+'''
+emb = 32 
+head_size = 16
+key = 32,16
+k = X @ key # (B,T,C) @ (C, head_size) -> (B,T, head_size)
+query = 32,16 and same for query
+'''
+
+#wei = q @ k.transpose(-2,-1) # (B,T,16) @ (B,16,T) --> (B,T,T)
+# we need to divide by square root of head size to keep wei gaussian distibutes
+wei = q @ k.transpose(-2,-1) * head_size**-0.5 # (B,T,16) @ (B,16,T) --> (B,T,T)
+tril = torch.tril(torch.ones(T,T))
+#commenting wei of zeros because we have real weighs now
+##wei = torch.zeros(T,T)
+## this is decoder block because we only want past to effect present
+## but we want an attention mecahnism from all nodes like for sentiment where future will also effect i
+## then we can comment next line, thats all
+wei = wei.masked_fill(tril == 0, float('-inf'))
+# we need to divide by square root of head size to keep wei gaussian distibutes
+wei = F.softmax(wei, dim=-1)
+#out = wei @ x
+out = wei @ v
+out.shape
+# %%
+
+# %%
 torch.manual_seed(32)
 a = torch.tril(torch.ones(3,3))
 a = a / torch.sum(a, dim=1, keepdim=True)
