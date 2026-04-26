@@ -177,6 +177,14 @@ wei = wei / wei.sum(1, keepdim=True)
 xbow2 = wei @ x # (B,T,T) @ (B,T,C)
 torch.allclose(xbow, xbow2)
 # %%
+#version 3: using softmax
+tril = torch.tril(torch.ones(T, T))
+wei = torch.zeros(T,T)
+wei = wei.masked_fill(tril ==0, float('-inf'))
+wei = F.softmax(wei, dim=-1)
+xbow3 = wei @ x
+torch.allclose(xbow, xbow3)
+# %%
 torch.manual_seed(32)
 a = torch.tril(torch.ones(3,3))
 a = a / torch.sum(a, dim=1, keepdim=True)

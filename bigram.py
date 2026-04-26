@@ -10,7 +10,7 @@ learning_rate = 1e-2
 # optimize for gpu or macbook with mps
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
 eval_iters = 200
-
+n_embd = 32 #embedding dimension
 #----------
 torch.manual_seed(1337)
 #----------
@@ -57,14 +57,25 @@ def estimate_loss():
     return out
 
 class BigramLanguageModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         super().__init__()
         #each token directly reads off the logits for the next token from a lookup table
-        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
+        #self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
+        #instead of using vocab_size, we are going to use embedding dimension of 32, and then we will project it to vocab_size
+        self.token_embedding_table = nn.Embedding(vocab_size, n_embd) #embedding dimension is 32
+        self.position_embedding_table = nn.Embedding(block_size, n_embd) #shape (block_size, n_embd)
+        #now add linear layer to project the embedding to vocab size
+        self.lm_head = nn.Linear(n_embd, vocab_size) #project the embedding to vocab size
 
     def forward(self, idx, targets=None):
         #idx and targets are both (B,T) tensors of integers
-        logits = self.token_embedding_table(idx) #(B,T,C) where C is the vocab size
+        #logits = self.token_embedding_table(idx) #(B,T,C) where C is the vocab size
+        #now we will use embedding so insted of logits being (B,T,C) it will be (B,T,n_embd)
+        tok_emb = self.token_embedding_table(idx) #(B, T, n_embd)
+        pos_emb = self.position_embedding_table(torch.arrange(T, device=device)) #(T, n_embd) position embedding for each time step
+        x = tok_emb + pos_emb #(B, T, n_embd) add the
+        #logits = self.lm_head(tok_emb) #(B, T, vocab_size)
+        logits = self.lm_head(x) #(B, T, vocab_size) project the embedding to vocab size
 
         if targets is None:
             loss = None
@@ -85,7 +96,8 @@ class BigramLanguageModel(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1) #(B,T+1) append the new token to the context
         return idx
 
-model = BigramLanguageModel(vocab_size)
+#we are not passing vocab size now because we are using the global variable vocab_size
+model = BigramLanguageModel()
 m = model.to(device)
 
 #create a PyTorch optimizer
