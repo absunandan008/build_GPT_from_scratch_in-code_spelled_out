@@ -210,6 +210,7 @@ query = 32,16 and same for query
 #wei = q @ k.transpose(-2,-1) # (B,T,16) @ (B,16,T) --> (B,T,T)
 # we need to divide by square root of head size to keep wei gaussian distibutes
 wei = q @ k.transpose(-2,-1) * head_size**-0.5 # (B,T,16) @ (B,16,T) --> (B,T,T)
+
 tril = torch.tril(torch.ones(T,T))
 #commenting wei of zeros because we have real weighs now
 ##wei = torch.zeros(T,T)
