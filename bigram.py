@@ -89,7 +89,7 @@ class MultiHeadAttention(nn.Module):
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
 
     def forward(self, x):
-        return torch.cat([h(x) for h in self.heads])
+        return torch.cat([h(x) for h in self.heads], dim=-1)
 
 class BigramLanguageModel(nn.Module):
     def __init__(self):
