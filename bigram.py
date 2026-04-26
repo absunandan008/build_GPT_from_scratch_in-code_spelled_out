@@ -104,6 +104,18 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+class Block(nn.Module):
+    """transformer block: communication followed by computation"""
+    def __init__(self, n_embd, n_head):
+        super().__init__()
+        head_size = n_embd // n_head
+        self.sa = MultiHeadAttention(n_head, head_size)
+        self.ffwd = FeedForward(n_embd)
+        
+    def forward(self, x):
+        x = self.sa(x)
+        x  = self.ffwd(x)
+        return x
 
 class BigramLanguageModel(nn.Module):
     def __init__(self):
@@ -114,9 +126,14 @@ class BigramLanguageModel(nn.Module):
         self.token_embedding_table = nn.Embedding(vocab_size, n_embd) #embedding dimension is 32
         self.position_embedding_table = nn.Embedding(block_size, n_embd) #shape (block_size, n_embd)
         ##self.sa_head = Head(n_embd) #self attention head
-        self.sa_heads = MultiHeadAttention(4, n_embd//4) #multihead attantion 4 communication channel, 8 self attention
+        ####self.sa_heads = MultiHeadAttention(4, n_embd//4) #multihead attantion 4 communication channel, 8 self attention
         #now add linear layer to project the embedding to vocab size
-        self.ffwd = FeedForward(n_embd) #feed forward network
+        ####self.ffwd = FeedForward(n_embd) #feed forward network
+        self.blocks = nn.Sequential(
+            Block(n_embd, n_head=4),
+            Block(n_embd, n_head=4),
+            Block(n_embd, n_head=4),
+        ) 
         self.lm_head = nn.Linear(n_embd, vocab_size) #project the embedding to vocab size
 
     def forward(self, idx, targets=None):
@@ -128,8 +145,9 @@ class BigramLanguageModel(nn.Module):
         pos_emb = self.position_embedding_table(torch.arange(T, device=device)) #(T, n_embd) position embedding for each time step
         x = tok_emb + pos_emb #(B, T, n_embd) add the
         ##x = self.sa_head(x) #(B, T, n_embd) self attention head
-        x = self.sa_heads(x) #multihead attention
-        x = self.ffwd(x) #feed forward network
+        ####x = self.sa_heads(x) #multihead attention
+        ####x = self.ffwd(x) #feed forward network
+        x = self.blocks(x) #transformer block
 
         #logits = self.lm_head(tok_emb) #(B, T, vocab_size)
         logits = self.lm_head(x) #(B, T, vocab_size) project the embedding to vocab size
