@@ -238,3 +238,36 @@ print(b)
 print("c::")
 print(c)
 # %%
+class BatchNorm1d:
+    #creating batch norm layer for 1d input (batch_size, features)
+    def __init__(self, dim, eps=1e-5, momentum=0.1):
+        self.eps = eps
+        #parameters (trained with backprop)
+        self.gamma = torch.ones(dim)
+        self.beta = torch.zeros(dim)
+
+    def __call__(self, x):
+    
+        #calculate mean and var for batch
+        xmean = x.mean(1, keepdim=True) # batch mean
+        xvar = x.var(1, keepdim=True, unbiased=True) # batch variance
+        #normalize
+        xhat = (x-xmean) / torch.sqrt(xvar + self.eps) #normalize unit variance
+        self.out = self.gamma * xhat + self.beta #scale and shift
+        #update the buffers
+        return self.out
+
+    def parameters(self):
+        return [self.gamma, self.beta]
+
+torch.manual_seed(1337)
+module = BatchNorm1d(100)
+x = torch.randn(32,100) # batch size 32 of 100 dimensional vectors
+x = module(x)
+x.shape
+# %%
+x[:, 0].mean(), x[:, 0].std()
+
+# %%
+x[0, :].mean(), x[0, :].std()
+# %%

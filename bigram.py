@@ -4,7 +4,8 @@ from torch.nn import functional as F
 
 #bigram only:    2.38
 #+ multihead:    2.25
-#+ residual:     2.00  ✅
+#+ residual:     2.00 
+#+ layernorm:  1.98  
 
 #hyperparameters
 batch_size = 32 #how many independent sequences will we process in parallel?
@@ -119,11 +120,13 @@ class Block(nn.Module):
         head_size = n_embd // n_head
         self.sa = MultiHeadAttention(n_head, head_size)
         self.ffwd = FeedForward(n_embd)
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.ln2 = nn.LayerNorm(n_embd)
         
     def forward(self, x):
         # we x + forkoff to do residual connections 
-        x = x + self.sa(x)
-        x  = x + self.ffwd(x)
+        x = x + self.sa(self.ln1(x))
+        x  = x + self.ffwd(self.ln2(x))
         return x
 
 class BigramLanguageModel(nn.Module):
@@ -142,6 +145,7 @@ class BigramLanguageModel(nn.Module):
             Block(n_embd, n_head=4),
             Block(n_embd, n_head=4),
             Block(n_embd, n_head=4),
+            nn.LayerNorm(n_embd),
         ) 
         self.lm_head = nn.Linear(n_embd, vocab_size) #project the embedding to vocab size
 
