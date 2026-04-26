@@ -91,6 +91,20 @@ class MultiHeadAttention(nn.Module):
     def forward(self, x):
         return torch.cat([h(x) for h in self.heads], dim=-1)
 
+#feed forward normla MLP
+class FeedForward(nn.Module):
+    """a simple linear layer followed by a non-linearity"""
+    def __init__(self, n_embd):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_embd, n_embd),
+            nn.ReLU(),
+        )
+    
+    def forward(self, x):
+        return self.net(x)
+
+
 class BigramLanguageModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -102,6 +116,7 @@ class BigramLanguageModel(nn.Module):
         ##self.sa_head = Head(n_embd) #self attention head
         self.sa_heads = MultiHeadAttention(4, n_embd//4) #multihead attantion 4 communication channel, 8 self attention
         #now add linear layer to project the embedding to vocab size
+        self.ffwd = FeedForward(n_embd) #feed forward network
         self.lm_head = nn.Linear(n_embd, vocab_size) #project the embedding to vocab size
 
     def forward(self, idx, targets=None):
@@ -114,6 +129,8 @@ class BigramLanguageModel(nn.Module):
         x = tok_emb + pos_emb #(B, T, n_embd) add the
         ##x = self.sa_head(x) #(B, T, n_embd) self attention head
         x = self.sa_heads(x) #multihead attention
+        x = self.ffwd(x) #feed forward network
+
         #logits = self.lm_head(tok_emb) #(B, T, vocab_size)
         logits = self.lm_head(x) #(B, T, vocab_size) project the embedding to vocab size
 
