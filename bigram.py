@@ -20,17 +20,17 @@ device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is
 eval_iters = 200
 n_embd = 32 #embedding dimension
 '''
-batch_size = 64 #how many independent sequences will we process in parallel?
-block_size = 256 #what is the maximum context length for predictions?
+batch_size = 32 #how many independent sequences will we process in parallel?
+block_size = 64 #what is the maximum context length for predictions?
 max_iters = 5000
 eval_interval = 500
 learning_rate = 3e-4
 # optimize for gpu or macbook with mps
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
 eval_iters = 200
-n_embd = 384 #embedding dimension
-n_head = 6
-n_layer = 6
+n_embd = 128 #embedding dimension
+n_head = 4
+n_layer = 4
 dropout = 0.2
 #----------
 torch.manual_seed(1337)
@@ -93,7 +93,7 @@ class Head(nn.Module):
         B,T,C = x.shape
         q = self.query(x) #(B,T,C)
         k = self.key(x) #(B,T,C)
-        wei = q @ k.transpose(-2,-1) * C**-0.5 #(B,T,C) @ (B,C,T) --> (B,T,T)
+        wei = q @ k.transpose(-2,-1) * q.size(-1)**-0.5 #(B,T,C) @ (B,C,T) --> (B,T,T)
         #compute attention scores(affinities)
         wei = wei.masked_fill(self.tril[:T,:T] == 0, float('-inf')) #(B,T,T)
         wei = F.softmax(wei, dim=-1) #(B,T,T)
@@ -115,6 +115,7 @@ class MultiHeadAttention(nn.Module):
     def forward(self, x):
         out = torch.cat([h(x) for h in self.heads], dim=-1)
         out = self.proj(out)
+        out = self.dropout(out)
         return out
 
 #feed forward normla MLP
@@ -183,7 +184,7 @@ class BigramLanguageModel(nn.Module):
         ####x = self.sa_heads(x) #multihead attention
         ####x = self.ffwd(x) #feed forward network
         x = self.blocks(x) #transformer block
-
+        x = self.ln_f(x)
         #logits = self.lm_head(tok_emb) #(B, T, vocab_size)
         logits = self.lm_head(x) #(B, T, vocab_size) project the embedding to vocab size
 
@@ -219,7 +220,7 @@ m = model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)    #training loop
 for iter in range(max_iters):
     #every once in a while evaluate the loss on train and val sets
-    if iter % 100 == 0:
+    if iter % eval_interval == 0:
         losses = estimate_loss()
         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
     
